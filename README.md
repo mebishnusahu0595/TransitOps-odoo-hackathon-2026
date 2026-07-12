@@ -1,10 +1,25 @@
-# 🚌 TransitOps
+# TransitOps
 
-> **Smart Transport Operations Platform** — Odoo Hackathon 2026
+**Smart Transport Operations Platform**
+
+*Odoo Hackathon 2026*
 
 ---
 
-## 👥 Team Members
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+
+---
+
+## Overview
+
+**TransitOps** is a Smart Transport Operations Platform designed to streamline and modernize public and private transit management. It provides real-time visibility, efficient scheduling, and operational insights to optimize transport networks end-to-end.
+
+---
+
+## Team
 
 | Name | Role |
 |------|------|
@@ -13,7 +28,7 @@
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -23,13 +38,7 @@
 
 ---
 
-## 📋 Problem Statement
-
-**TransitOps** is a Smart Transport Operations Platform designed to streamline and modernize public and private transit management. It provides real-time visibility, efficient scheduling, and operational insights to optimize transport networks.
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -37,9 +46,7 @@
 - Python >= 3.10
 - PostgreSQL >= 14
 
-### Installation
-
-#### Frontend (React)
+### Frontend Setup
 
 ```bash
 cd frontend
@@ -47,7 +54,7 @@ npm install
 npm run dev
 ```
 
-#### Backend (FastAPI)
+### Backend Setup
 
 ```bash
 cd backend
@@ -57,31 +64,30 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-#### Database
+### Database Setup
 
 ```bash
-# Create the PostgreSQL database
 psql -U postgres -c "CREATE DATABASE transitops;"
 ```
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 TransitOps/
-├── frontend/          # React application
-├── backend/           # FastAPI application
+├── frontend/               # React application
+├── backend/                # FastAPI application
 │   ├── main.py
 │   ├── routers/
 │   ├── models/
 │   └── requirements.txt
-├── docs/              # Documentation
+├── docs/                   # Documentation
 └── README.md
 ```
 
 ---
 
-## 📄 License
+## License
 
-This project was built for the **Odoo Hackathon 2026**.
+Built for **Odoo Hackathon 2026**. All rights reserved.
