@@ -100,48 +100,85 @@ def read_users_me(current_user: models.User = Depends(get_current_user)):
 
 # --- Dashboard Endpoints ---
 @app.get("/dashboard/stats", response_model=schemas.DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(
+    type: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     # Run warnings checks
     services.check_license_expiry_warnings(db)
 
-    active_vehicles = db.query(models.Vehicle).filter(models.Vehicle.status == "On Trip").count()
-    available_vehicles = db.query(models.Vehicle).filter(models.Vehicle.status == "Available").count()
-    vehicles_in_maintenance = db.query(models.Vehicle).filter(models.Vehicle.status == "In Shop").count()
+    # Base vehicle query
+    veh_query = db.query(models.Vehicle)
+    if type and type != "All":
+        veh_query = veh_query.filter(models.Vehicle.type == type)
+    if status and status != "All":
+        veh_query = veh_query.filter(models.Vehicle.status == status)
+
+    active_vehicles = veh_query.filter(models.Vehicle.status == "On Trip").count()
+    available_vehicles = veh_query.filter(models.Vehicle.status == "Available").count()
+    vehicles_in_maintenance = veh_query.filter(models.Vehicle.status == "In Shop").count()
     
-    active_trips = db.query(models.Trip).filter(models.Trip.status == "Dispatched").count()
-    pending_trips = db.query(models.Trip).filter(models.Trip.status == "Draft").count()
+    # Filtered vehicles list to filter related trips/fuel
+    filtered_veh_ids = [v.id for v in veh_query.all()]
+
+    active_trips = db.query(models.Trip).filter(models.Trip.status == "Dispatched")
+    pending_trips = db.query(models.Trip).filter(models.Trip.status == "Draft")
+    
+    if type and type != "All":
+        active_trips = active_trips.join(models.Vehicle).filter(models.Vehicle.type == type)
+        pending_trips = pending_trips.join(models.Vehicle).filter(models.Vehicle.type == type)
+        
+    active_trips_count = active_trips.count()
+    pending_trips_count = pending_trips.count()
     
     drivers_on_duty = db.query(models.Driver).filter(models.Driver.status.in_(["Available", "On Trip"])).count()
     
     total_active_avail = active_vehicles + available_vehicles
     utilization = (active_vehicles / total_active_avail * 100.0) if total_active_avail > 0 else 0.0
     
-    # Financial metrics
-    fuel_cost = db.query(models.FuelLog.cost)
-    total_fuel = sum(item[0] for item in fuel_cost.all())
+    # Financial metrics filtered by vehicles
+    fuel_query = db.query(models.FuelLog.cost)
+    maint_query = db.query(models.MaintenanceLog.cost)
+    other_query = db.query(models.Expense.cost).filter(models.Expense.type.notin_(["Fuel", "Maintenance"]))
+    rev_query = db.query(models.Trip.revenue).filter(models.Trip.status == "Completed")
     
-    maintenance_cost = db.query(models.MaintenanceLog.cost)
-    total_maintenance = sum(item[0] for item in maintenance_cost.all())
+    if filtered_veh_ids:
+        fuel_query = fuel_query.filter(models.FuelLog.vehicle_id.in_(filtered_veh_ids))
+        maint_query = maint_query.filter(models.MaintenanceLog.vehicle_id.in_(filtered_veh_ids))
+        other_query = other_query.filter(models.Expense.vehicle_id.in_(filtered_veh_ids))
+        rev_query = rev_query.filter(models.Trip.vehicle_id.in_(filtered_veh_ids))
+    else:
+        return schemas.DashboardStats(
+            active_vehicles=0,
+            available_vehicles=0,
+            vehicles_in_maintenance=0,
+            active_trips=0,
+            pending_trips=0,
+            drivers_on_duty=0,
+            fleet_utilization=0,
+            total_fuel_cost=0,
+            total_maintenance_cost=0,
+            total_expense_cost=0,
+            total_revenue=0,
+            roi=0
+        )
+        
+    total_fuel = sum(item[0] for item in fuel_query.all())
+    total_maintenance = sum(item[0] for item in maint_query.all())
+    total_other = sum(item[0] for item in other_query.all())
+    total_rev = sum(item[0] for item in rev_query.all())
     
-    other_expenses = db.query(models.Expense.cost).filter(models.Expense.type.notin_(["Fuel", "Maintenance"]))
-    total_other = sum(item[0] for item in other_expenses.all())
+    total_acq = sum(v.acquisition_cost for v in veh_query.all())
     
-    revenue = db.query(models.Trip.revenue).filter(models.Trip.status == "Completed")
-    total_rev = sum(item[0] for item in revenue.all())
-    
-    # Acquisition cost of active/available/in_shop/retired vehicles
-    acq_cost = db.query(models.Vehicle.acquisition_cost)
-    total_acq = sum(item[0] for item in acq_cost.all())
-    
-    # ROI: (Revenue - (Maintenance + Fuel)) / Acquisition Cost
     roi = ((total_rev - (total_maintenance + total_fuel)) / total_acq * 100.0) if total_acq > 0 else 0.0
     
     return schemas.DashboardStats(
         active_vehicles=active_vehicles,
         available_vehicles=available_vehicles,
         vehicles_in_maintenance=vehicles_in_maintenance,
-        active_trips=active_trips,
-        pending_trips=pending_trips,
+        active_trips=active_trips_count,
+        pending_trips=pending_trips_count,
         drivers_on_duty=drivers_on_duty,
         fleet_utilization=round(utilization, 1),
         total_fuel_cost=round(total_fuel, 2),
