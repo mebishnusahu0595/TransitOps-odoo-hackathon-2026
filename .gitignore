@@ -130,3 +130,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Root configuration helper files (requested to be local-only)
+start.sh
+docker-compose.yml
+.env.example

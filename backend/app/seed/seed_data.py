@@ -309,4 +309,4 @@ def seed_db(db: Session):
         db.add(note)
         
     db.commit()
-    print("Database seeding completed! 🚀")
+    print("Database seeding completed!")
