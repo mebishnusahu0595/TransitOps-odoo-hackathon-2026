@@ -1,25 +1,30 @@
 import bcrypt
-# Add dummy __about__ module to bcrypt to satisfy passlib
-if not hasattr(bcrypt, "__about__"):
-    class DummyAbout:
-        __version__ = bcrypt.__version__
-    bcrypt.__about__ = DummyAbout()
-
 from datetime import datetime, timedelta
 from typing import Union, Any
 import jwt
-from passlib.context import CryptContext
 from app.core.config import settings
 
-# CryptContext for password hashing
-# using bcrypt with SHA256 fallback compatibility
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode('utf-8'),
+            hashed_password.encode('utf-8')
+        )
+    except Exception:
+        return False
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    try:
+        pwd_bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(pwd_bytes, salt)
+        return hashed.decode('utf-8')
+    except Exception as e:
+        # Fallback if manual truncate is needed by the driver
+        pwd_bytes = password.encode('utf-8')[:72]
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(pwd_bytes, salt)
+        return hashed.decode('utf-8')
 
 def create_access_token(subject: Union[str, Any], role: str, expires_delta: timedelta = None) -> str:
     if expires_delta:
